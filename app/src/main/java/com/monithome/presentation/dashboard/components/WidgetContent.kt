@@ -21,11 +21,12 @@ fun WidgetContent(widgetId: String, state: DashboardState, viewModel: DashboardV
     val onToggleStats = remember(viewModel) { { viewModel.processIntent(DashboardIntent.ToggleStatsExpanded) } }
 
     when (widgetId) {
-        "proxmox" -> {
-            if (state.proxmoxEnabled) {
+        "proxmox_sentinel", "proxmox" -> {
+            val isPluginActive = state.activePlugins.any { it.id == "proxmox_sentinel" && it.active }
+            if (isPluginActive || state.proxmoxEnabled) {
                 com.monithome.presentation.components.proxmox.ProxmoxWidget(
                     connected = state.proxmoxConnected,
-                    enabled = state.proxmoxEnabled,
+                    enabled = isPluginActive || state.proxmoxEnabled,
                     error = state.proxmoxError,
                     alerts = state.proxmoxAlerts,
                     logs = state.proxmoxLogs,

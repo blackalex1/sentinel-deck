@@ -87,7 +87,7 @@ class IntentHandler(
                 val s = state.value
                 val visibleWidgets = s.widgetOrder.filter { id ->
                     when (id) {
-                        "proxmox" -> s.proxmoxEnabled
+                        "proxmox", "proxmox_sentinel" -> s.activePlugins.any { it.id == "proxmox_sentinel" && it.active } || s.proxmoxEnabled
                         "media" -> s.activePlugins.any { it.type == "media_source" && it.active }
                         "pc_system" -> s.activePlugins.any { it.id == "pc_system" && it.active }
                         "yandex_lyrics" -> s.mediaState.isLyricsActive
@@ -132,10 +132,16 @@ class IntentHandler(
                 ) }
             }
 
-            // Proxmox Sentinel Direct Integration
+            // Proxmox Sentinel Integration (Plugin-based)
             is DashboardIntent.SaveProxmoxConfig -> {
                 settingsRepository.saveProxmoxConfig(intent.url, intent.token, intent.enabled)
                 proxmoxClient.configure(intent.url, intent.token, intent.enabled)
+                // Отправляем настройки в Sentinel Hub плагин для синхронизации экосистемы
+                pluginRepository.sendCommand(
+                    pluginId = "proxmox_sentinel",
+                    action = "save_settings",
+                    data = mapOf("server_url" to intent.url, "token" to intent.token)
+                )
                 state.update { it.copy(
                     proxmoxUrl = intent.url,
                     proxmoxToken = intent.token,

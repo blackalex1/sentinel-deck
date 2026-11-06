@@ -86,7 +86,7 @@ fun DashboardScreen(
                         val visibleWidgets = remember(state.widgetOrder, state.activePlugins, state.mediaState.isLyricsActive, state.proxmoxEnabled) {
                             state.widgetOrder.filter { id ->
                                 when (id) {
-                                    "proxmox" -> state.proxmoxEnabled
+                                    "proxmox", "proxmox_sentinel" -> state.activePlugins.any { it.id == "proxmox_sentinel" && it.active } || state.proxmoxEnabled
                                     "media" -> state.activePlugins.any { it.type == "media_source" && it.active }
                                     "pc_system" -> state.activePlugins.any { it.id == "pc_system" && it.active }
                                     "yandex_lyrics" -> state.mediaState.isLyricsActive

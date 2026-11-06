@@ -121,27 +121,57 @@ class DashboardViewModel(
                 }
             }
         }
+
+        // Автоматическая синхронизация Proxmox Sentinel из плагина Sentinel Hub
+        viewModelScope.launch {
+            _state.map { it.stats["proxmox_sentinel"] }
+                .distinctUntilChanged()
+                .collect { pStats ->
+                    if (pStats != null) {
+                        val isActive = pStats["active"] as? Boolean ?: true
+                        val serverUrl = pStats["server_url"] as? String
+                        val token = pStats["token"] as? String
+                        val configured = pStats["configured"] as? Boolean ?: false
+
+                        if (isActive && configured && !serverUrl.isNullOrEmpty() && !token.isNullOrEmpty()) {
+                            _state.update { it.copy(
+                                proxmoxUrl = serverUrl,
+                                proxmoxToken = token,
+                                proxmoxEnabled = true
+                            ) }
+                            settingsRepository.saveProxmoxConfig(serverUrl, token, true)
+                            proxmoxClient.configure(serverUrl, token, true)
+                        } else if (!isActive) {
+                            _state.update { it.copy(proxmoxEnabled = false) }
+                            proxmoxClient.disconnect()
+                        }
+                    }
+                }
+        }
     }
 
     private fun handleUiConfigUpdate(configs: List<PluginInfo>) {
         _state.update { s ->
             val isLyricsActive = configs.any { (it.id == "yandex_lyrics" || it.id == "sentinel_music") && it.active }
+            val isProxmoxActive = configs.any { it.id == "proxmox_sentinel" && it.active }
             val currentOrder = s.widgetOrder.toMutableList()
             configs.forEach { plugin ->
                 val widgetId = when {
                     plugin.type == "media_source" -> "media"
                     plugin.id == "yandex_lyrics" -> "yandex_lyrics"
+                    plugin.id == "proxmox_sentinel" -> "proxmox_sentinel"
                     else -> plugin.id
                 }
                 if (!currentOrder.contains(widgetId)) currentOrder.add(widgetId)
             }
-            if (s.proxmoxEnabled && !currentOrder.contains("proxmox")) {
-                currentOrder.add(0, "proxmox")
+            if ((isProxmoxActive || s.proxmoxEnabled) && !currentOrder.contains("proxmox_sentinel") && !currentOrder.contains("proxmox")) {
+                currentOrder.add(0, "proxmox_sentinel")
             }
             s.copy(
                 activePlugins = configs,
                 widgetOrder = currentOrder,
                 mediaState = s.mediaState.copy(isLyricsActive = isLyricsActive),
+                proxmoxEnabled = isProxmoxActive || s.proxmoxEnabled,
                 isLoading = false
             )
         }
