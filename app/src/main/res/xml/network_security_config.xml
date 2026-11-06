@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Запрет открытого HTTP/WS трафика в глобальную сеть -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Разрешение незашифрованного трафика только для локальной подсети 192.168.1.0/24 и loopback -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <!-- Целевые серверы аудита и хосты локальной подсети 192.168.1.0/24 -->
+        <domain includeSubdomains="true">192.168.1.93</domain>
+        <domain includeSubdomains="true">192.168.1.89</domain>
+        <domain includeSubdomains="true">192.168.1.1</domain>
+        <domain includeSubdomains="true">192.168.1</domain>
+    </domain-config>
+</network-security-config>
