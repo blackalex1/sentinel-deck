@@ -58,7 +58,11 @@ fun ProxmoxWidget(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // Левая часть: Иконка и название (с гибким сжатием при нехватке ширины)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f, fill = false)
+                ) {
                     Icon(
                         imageVector = Icons.Default.Security,
                         contentDescription = "Proxmox Sentinel",
@@ -69,26 +73,19 @@ fun ProxmoxWidget(
                     Text(
                         text = "Proxmox Sentinel",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
-                    if (alerts.isNotEmpty()) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Box(
-                            modifier = Modifier
-                                .background(Color(0xFFEF4444), CircleShape)
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = alerts.size.toString(),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
-                    }
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Правая часть: Статус, кнопка очистки со счетчиком и настройки
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     // Индикатор статуса
                     val (statusColor, statusText) = when {
                         !enabled -> Color.Gray to "Откл."
@@ -108,7 +105,7 @@ fun ProxmoxWidget(
                                 .size(7.dp)
                                 .background(statusColor, CircleShape)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(5.dp))
                         Text(
                             text = statusText,
                             fontSize = 11.sp,
@@ -117,21 +114,30 @@ fun ProxmoxWidget(
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(8.dp))
-
+                    // Интерактивный бейдж-кнопка очистки всех алертов со счетчиком
                     if (alerts.isNotEmpty()) {
-                        IconButton(
-                            onClick = { onIntent(DashboardIntent.ClearAllProxmoxAlerts) },
-                            modifier = Modifier.size(32.dp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .background(Color(0xFFEF4444).copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                                .border(1.dp, Color(0xFFEF4444).copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                                .clickable { onIntent(DashboardIntent.ClearAllProxmoxAlerts) }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.DeleteSweep,
-                                contentDescription = "Очистить все алерты",
+                                contentDescription = "Очистить все алерты (${alerts.size})",
                                 tint = Color(0xFFEF4444),
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = alerts.size.toString(),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFEF4444)
                             )
                         }
-                        Spacer(modifier = Modifier.width(4.dp))
                     }
 
                     IconButton(
