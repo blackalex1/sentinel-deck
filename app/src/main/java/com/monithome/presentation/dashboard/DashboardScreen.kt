@@ -24,6 +24,7 @@ import org.koin.androidx.compose.koinViewModel
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import kotlin.math.roundToInt
 
+@Suppress("UNCHECKED_CAST")
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel = koinViewModel()

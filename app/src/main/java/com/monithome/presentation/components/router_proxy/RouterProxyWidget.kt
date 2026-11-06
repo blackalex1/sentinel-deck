@@ -266,7 +266,7 @@ fun RouterProxyWidget(
             }
 
             // Разделитель
-            Divider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f), thickness = 1.dp, modifier = Modifier.padding(bottom = 16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f), thickness = 1.dp, modifier = Modifier.padding(bottom = 16.dp))
 
             // Блок Mihomo
             Text(

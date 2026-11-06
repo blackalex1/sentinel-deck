@@ -3,7 +3,6 @@ package com.monithome.data.network.proxmox
 import android.util.Log
 import com.monithome.domain.models.proxmox.ProxmoxAlert
 import com.monithome.domain.models.proxmox.ProxmoxConnectionState
-import com.monithome.domain.models.proxmox.ProxmoxLog
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,9 +43,6 @@ class ProxmoxDirectClient(baseClient: OkHttpClient) {
 
     private val _alerts = MutableStateFlow<List<ProxmoxAlert>>(emptyList())
     val alerts: StateFlow<List<ProxmoxAlert>> = _alerts.asStateFlow()
-
-    private val _logs = MutableStateFlow<List<ProxmoxLog>>(emptyList())
-    val logs: StateFlow<List<ProxmoxLog>> = _logs.asStateFlow()
 
     private val _latestAlert = MutableSharedFlow<ProxmoxAlert>(extraBufferCapacity = 32)
     val latestAlert: SharedFlow<ProxmoxAlert> = _latestAlert.asSharedFlow()
@@ -115,19 +111,36 @@ class ProxmoxDirectClient(baseClient: OkHttpClient) {
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                val errorMsg = if (response != null) "HTTP ${response.code}: ${response.message}" else t.message ?: "Ошибка сети"
-                Log.e(TAG, "WebSocket failure: $errorMsg", t)
+                val code = response?.code
+                val errBody = try { response?.body?.string() } catch (_: Exception) { null }
+                val errMsg = when {
+                    code == 401 -> "Ошибка 401: Неверный Bearer токен"
+                    code == 403 -> "Ошибка 403: Доступ запрещен"
+                    code == 404 -> "Ошибка 404: WSS-эндпоинт не найден (проверьте URL)"
+                    code == 503 -> "Ошибка 503: Превышен лимит подключений к серверу"
+                    t is java.net.ConnectException -> "Ошибка соединения: хост недоступен"
+                    t is java.net.SocketTimeoutException -> "Таймаут подключения к Proxmox Sentinel"
+                    t is javax.net.ssl.SSLException -> "SSL/TLS ошибка: ${t.localizedMessage ?: t.message}"
+                    else -> t.localizedMessage ?: "Сбой WebSocket"
+                }
+
+                Log.e(TAG, "WebSocket failure: $errMsg (code=$code, body=$errBody)", t)
                 stopHeartbeat()
-                _connectionState.value = ProxmoxConnectionState.Error(errorMsg)
+                _connectionState.value = ProxmoxConnectionState.Error(errMsg)
                 scheduleReconnect()
             }
         })
     }
 
     fun disconnect() {
-        reconnectJob?.cancel()
         stopHeartbeat()
-        webSocket?.close(1000, "Client disconnect requested")
+        reconnectJob?.cancel()
+        reconnectJob = null
+        try {
+            webSocket?.close(1000, "Client disconnect")
+        } catch (e: Exception) {
+            Log.w(TAG, "Error closing websocket: ${e.message}")
+        }
         webSocket = null
         _connectionState.value = ProxmoxConnectionState.Disconnected
     }
@@ -136,8 +149,8 @@ class ProxmoxDirectClient(baseClient: OkHttpClient) {
         _alerts.value = emptyList()
     }
 
-    fun clearLogs() {
-        _logs.value = emptyList()
+    fun removeAlert(alertId: String) {
+        _alerts.update { current -> current.filterNot { it.id == alertId } }
     }
 
     private fun formatWebSocketUrl(rawUrl: String): String {
@@ -166,12 +179,10 @@ class ProxmoxDirectClient(baseClient: OkHttpClient) {
             val json = JSONObject(text)
             when (json.optString("type")) {
                 "init" -> {
-                    // Парсинг начального снимка алертов и логов
+                    // Парсинг начального снимка алертов
                     val recentAlerts = parseAlertsArray(json.optJSONArray("recent_alerts"))
-                    val recentLogs = parseLogsArray(json.optJSONArray("recent_logs"))
                     _alerts.value = recentAlerts
-                    _logs.value = recentLogs
-                    Log.i(TAG, "Initialized snapshot: ${recentAlerts.size} alerts, ${recentLogs.size} logs")
+                    Log.i(TAG, "Initialized snapshot: ${recentAlerts.size} alerts")
                 }
                 "alert" -> {
                     val alert = parseAlert(json)
@@ -181,12 +192,6 @@ class ProxmoxDirectClient(baseClient: OkHttpClient) {
                     }
                     _latestAlert.tryEmit(alert)
                     Log.i(TAG, "New Proxmox Alert: [${alert.severity}] ${alert.text}")
-                }
-                "log" -> {
-                    val logEntry = parseLog(json)
-                    _logs.update { current ->
-                        (current + logEntry).takeLast(200)
-                    }
                 }
                 "pong" -> {
                     Log.d(TAG, "Heartbeat pong received")
@@ -208,32 +213,12 @@ class ProxmoxDirectClient(baseClient: OkHttpClient) {
         )
     }
 
-    private fun parseLog(obj: JSONObject): ProxmoxLog {
-        return ProxmoxLog(
-            id = obj.optString("id", "log_${System.currentTimeMillis()}"),
-            timestamp = obj.optDouble("timestamp", System.currentTimeMillis() / 1000.0),
-            source = obj.optString("source", "system"),
-            level = obj.optString("level", "INFO").uppercase(),
-            line = obj.optString("line", "")
-        )
-    }
-
     private fun parseAlertsArray(arr: JSONArray?): List<ProxmoxAlert> {
         if (arr == null) return emptyList()
         val list = mutableListOf<ProxmoxAlert>()
         for (i in 0 until arr.length()) {
             val item = arr.optJSONObject(i)
             if (item != null) list.add(parseAlert(item))
-        }
-        return list
-    }
-
-    private fun parseLogsArray(arr: JSONArray?): List<ProxmoxLog> {
-        if (arr == null) return emptyList()
-        val list = mutableListOf<ProxmoxLog>()
-        for (i in 0 until arr.length()) {
-            val item = arr.optJSONObject(i)
-            if (item != null) list.add(parseLog(item))
         }
         return list
     }

@@ -39,7 +39,7 @@ class SettingsRepositoryImpl(context: Context) : SettingsRepository {
             id = java.util.UUID.randomUUID().toString()
             prefs.edit().putString("device_unique_id", id).apply()
         }
-        return id!!
+        return id
     }
 
     override fun getProxmoxConfig(): Triple<String, String, Boolean> {

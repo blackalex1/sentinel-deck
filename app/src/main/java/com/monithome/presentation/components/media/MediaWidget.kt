@@ -1,7 +1,10 @@
 package com.monithome.presentation.components.media
 
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeDown
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
@@ -100,19 +103,33 @@ fun MediaWidget(
 
 @Composable
 fun MediaSourceSelector(sources: List<MediaSource>, translations: Map<String, String>, selectedId: String?, onSelect: (String) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         sources.forEach { source ->
             val id = "${source.pluginId}:${source.deviceId}"
             val isSelected = id == selectedId
+            val displayName = source.name.ifBlank { translations["plugin_name_${source.pluginId}"] ?: source.pluginId }
+
             Surface(
                 onClick = { onSelect(id) },
-                shape = MaterialTheme.shapes.small,
-                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                shape = RoundedCornerShape(8.dp),
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.height(32.dp)
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 12.dp)) {
-                    val displayName = source.name.ifBlank { translations["plugin_name_${source.pluginId}"] ?: source.pluginId }
-                    Text(text = displayName.uppercase(), color = if (isSelected) MaterialTheme.colorScheme.onPrimary else Color.Gray, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = displayName.uppercase(),
+                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 10.5.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        maxLines = 1,
+                        softWrap = false
+                    )
                 }
             }
         }

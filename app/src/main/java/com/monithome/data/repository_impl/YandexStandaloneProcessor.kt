@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 
+@Suppress("UNCHECKED_CAST")
 class YandexStandaloneProcessor(
     private val yandexLyricsClient: YandexLyricsClient
 ) {

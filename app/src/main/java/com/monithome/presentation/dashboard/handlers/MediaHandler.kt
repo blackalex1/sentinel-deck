@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
+@Suppress("UNCHECKED_CAST")
 class MediaHandler(
     private val pluginRepository: PluginRepository
 ) {

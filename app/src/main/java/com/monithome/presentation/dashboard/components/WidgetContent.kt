@@ -29,7 +29,6 @@ fun WidgetContent(widgetId: String, state: DashboardState, viewModel: DashboardV
                     enabled = isPluginActive || state.proxmoxEnabled,
                     error = state.proxmoxError,
                     alerts = state.proxmoxAlerts,
-                    logs = state.proxmoxLogs,
                     themeColor = state.themeColor,
                     onIntent = onIntent
                 )

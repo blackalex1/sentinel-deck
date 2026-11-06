@@ -10,14 +10,6 @@ data class ProxmoxAlert(
     val metadata: Map<String, Any> = emptyMap()
 )
 
-data class ProxmoxLog(
-    val id: String = "",
-    val timestamp: Double = 0.0,
-    val source: String = "",
-    val level: String = "INFO",
-    val line: String = ""
-)
-
 sealed class ProxmoxConnectionState {
     object Disconnected : ProxmoxConnectionState()
     object Connecting : ProxmoxConnectionState()

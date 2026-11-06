@@ -75,13 +75,10 @@ fun ProxmoxAlertBanner(
                                 fontSize = 11.sp
                             )
                         }
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
+                        Spacer(modifier = Modifier.height(4.dp))
+                        ProxmoxMarkdownContent(
                             text = alert.text,
-                            color = Color.White,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            lineHeight = 18.sp
+                            isCompact = true
                         )
                     }
 

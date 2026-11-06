@@ -6,8 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Login
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -186,7 +186,7 @@ fun AuthDialog(state: DashboardState, viewModel: DashboardViewModel) {
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Icon(
-                                imageVector = Icons.Default.Login,
+                                imageVector = Icons.AutoMirrored.Filled.Login,
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp)
                             )

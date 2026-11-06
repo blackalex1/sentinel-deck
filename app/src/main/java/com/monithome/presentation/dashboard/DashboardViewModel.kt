@@ -109,12 +109,6 @@ class DashboardViewModel(
         }
 
         viewModelScope.launch {
-            proxmoxClient.logs.collect { logs ->
-                _state.update { it.copy(proxmoxLogs = logs) }
-            }
-        }
-
-        viewModelScope.launch {
             proxmoxClient.latestAlert.collect { alert ->
                 if (alert.severity == "CRITICAL" || alert.severity == "WARNING") {
                     _state.update { it.copy(activeProxmoxBannerAlert = alert) }
