@@ -1,0 +1,4 @@
+com.monithome
+drawable app_logo
+mipmap ic_launcher
+style Theme_MonitHomeNative
