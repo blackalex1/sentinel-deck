@@ -107,5 +107,6 @@ sealed class DashboardIntent {
     // Proxmox Sentinel Direct Integration
     data class SaveProxmoxConfig(val url: String, val token: String, val enabled: Boolean) : DashboardIntent()
     data class DismissProxmoxAlert(val alertId: String) : DashboardIntent()
+    data object ClearAllProxmoxAlerts : DashboardIntent()
     data class SetProxmoxSettingsDialog(val show: Boolean) : DashboardIntent()
 }

@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Settings
@@ -117,6 +118,21 @@ fun ProxmoxWidget(
                     }
 
                     Spacer(modifier = Modifier.width(8.dp))
+
+                    if (alerts.isNotEmpty()) {
+                        IconButton(
+                            onClick = { onIntent(DashboardIntent.ClearAllProxmoxAlerts) },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DeleteSweep,
+                                contentDescription = "Очистить все алерты",
+                                tint = Color(0xFFEF4444),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
 
                     IconButton(
                         onClick = { onIntent(DashboardIntent.SetProxmoxSettingsDialog(true)) },

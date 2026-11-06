@@ -157,6 +157,12 @@ class IntentHandler(
                     )
                 }
             }
+            is DashboardIntent.ClearAllProxmoxAlerts -> {
+                proxmoxClient.clearAlerts()
+                state.update { current ->
+                    current.copy(proxmoxAlerts = emptyList())
+                }
+            }
             is DashboardIntent.SetProxmoxSettingsDialog -> {
                 state.update { it.copy(showProxmoxSettingsDialog = intent.show) }
             }

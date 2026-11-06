@@ -17,12 +17,13 @@ object CryptoUtils {
             val keyBytes = hexToBytes(keyHex)
             val secretKey = SecretKeySpec(keyBytes, "AES")
             val cipher = Cipher.getInstance(ALGORITHM)
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+            val nonce = ByteArray(NONCE_SIZE).apply { java.security.SecureRandom().nextBytes(this) }
+            val spec = GCMParameterSpec(TAG_SIZE * 8, nonce)
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey, spec)
             
-            val nonce = cipher.iv 
             val ciphertextWithTag = cipher.doFinal(data.toByteArray(Charsets.UTF_8))
             
-            val tagSizeInBytes = 16
+            val tagSizeInBytes = TAG_SIZE
             val ciphertextOnlySize = ciphertextWithTag.size - tagSizeInBytes
             val tag = ciphertextWithTag.copyOfRange(ciphertextOnlySize, ciphertextWithTag.size)
             val ciphertextOnly = ciphertextWithTag.copyOfRange(0, ciphertextOnlySize)

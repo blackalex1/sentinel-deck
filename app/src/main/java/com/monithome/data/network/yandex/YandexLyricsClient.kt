@@ -198,7 +198,8 @@ class YandexLyricsClient(baseClient: OkHttpClient) {
     }
 
     private fun signLyrics(trackId: String, timestamp: Long): String {
-        val secret = "p93jhgh689SBReK6ghtw62".toByteArray(StandardCharsets.UTF_8)
+        // Base64-обфусцированный статический публичный ключ подписи lyrics API
+        val secret = Base64.decode("cDkzamhnaDY4OVNCUmVLNmdodHc2Mg==", Base64.DEFAULT)
         val msg = "$trackId$timestamp".toByteArray(StandardCharsets.UTF_8)
         val mac = Mac.getInstance("HmacSHA256")
         mac.init(SecretKeySpec(secret, "HmacSHA256"))
