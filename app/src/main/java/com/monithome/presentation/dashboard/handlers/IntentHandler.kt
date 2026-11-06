@@ -149,15 +149,11 @@ class IntentHandler(
                     showProxmoxSettingsDialog = false
                 ) }
             }
-            is DashboardIntent.DismissProxmoxBanner -> {
-                state.update { it.copy(activeProxmoxBannerAlert = null) }
-            }
             is DashboardIntent.DismissProxmoxAlert -> {
                 proxmoxClient.removeAlert(intent.alertId)
                 state.update { current ->
                     current.copy(
-                        proxmoxAlerts = current.proxmoxAlerts.filterNot { it.id == intent.alertId },
-                        activeProxmoxBannerAlert = if (current.activeProxmoxBannerAlert?.id == intent.alertId) null else current.activeProxmoxBannerAlert
+                        proxmoxAlerts = current.proxmoxAlerts.filterNot { it.id == intent.alertId }
                     )
                 }
             }

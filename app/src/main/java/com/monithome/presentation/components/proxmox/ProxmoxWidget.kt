@@ -373,3 +373,12 @@ private fun AlertCardItem(alert: ProxmoxAlert) {
         }
     }
 }
+
+@Composable
+private fun rememberFormattedTime(timestampSec: Double): String {
+    return remember(timestampSec) {
+        if (timestampSec <= 0.0) return@remember ""
+        val sdf = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
+        sdf.format(java.util.Date((timestampSec * 1000).toLong()))
+    }
+}

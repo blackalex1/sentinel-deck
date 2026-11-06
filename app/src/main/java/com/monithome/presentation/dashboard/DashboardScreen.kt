@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.monithome.presentation.components.lyrics.LyricsWidget
 import com.monithome.presentation.components.stats.StatsChartsWidget
-import com.monithome.presentation.components.proxmox.ProxmoxAlertBanner
 import com.monithome.presentation.components.proxmox.ProxmoxSettingsDialog
 import com.monithome.presentation.dashboard.components.*
 import org.koin.androidx.compose.koinViewModel
@@ -57,12 +56,6 @@ fun DashboardScreen(
                 .padding(paddingValues)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Всплывающий алерт безопасности Proxmox Sentinel (в самом верху экрана)
-                ProxmoxAlertBanner(
-                    alert = state.activeProxmoxBannerAlert,
-                    onDismiss = { viewModel.processIntent(DashboardIntent.DismissProxmoxBanner) }
-                )
-
                 // Панель выбора цвета (появляется при перетаскивании)
                 AnimatedVisibility(
                     visible = state.isReordering,
@@ -89,44 +82,47 @@ fun DashboardScreen(
                                 when (id) {
                                     "proxmox", "proxmox_sentinel" -> state.activePlugins.any { it.id == "proxmox_sentinel" && it.active } || state.proxmoxEnabled
                                     "media" -> state.activePlugins.any { it.type == "media_source" && it.active }
-                                    "pc_system" -> state.activePlugins.any { it.id == "pc_system" && it.active }
+                                    "pc_system" -> state.activePlugins.any { it.id == "system_control" && it.active }
+                                    "virtual_camera" -> state.activePlugins.any { it.id == "virtual_camera" && it.active }
                                     "yandex_lyrics" -> state.mediaState.isLyricsActive
                                     "system_stats" -> state.activePlugins.any { it.id == "system_stats" && it.active }
-                                    "pc_disks" -> state.activePlugins.any { it.id == "pc_disks" && it.active }
-                                    else -> state.activePlugins.any { it.id == id && it.active }
+                                    "pc_disks" -> state.activePlugins.any { it.id == "system_stats" && it.active }
+                                    "keenetic_mihomo" -> state.activePlugins.any { (it.id == "keenetic_proxy" || it.id == "mihomo_service") && it.active }
+                                    else -> true
                                 }
                             }
                         }
 
                         LazyVerticalStaggeredGrid(
+                            columns = StaggeredGridCells.Fixed(3),
                             state = gridState,
-                            columns = StaggeredGridCells.Adaptive(minSize = 340.dp),
-                            contentPadding = PaddingValues(bottom = 16.dp),
+                            modifier = Modifier.fillMaxSize(),
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            verticalItemSpacing = 16.dp,
-                            modifier = Modifier.fillMaxSize()
+                            verticalItemSpacing = 16.dp
                         ) {
-                            items(visibleWidgets.size, key = { index -> visibleWidgets[index] }) { index ->
-                                val widgetId = visibleWidgets[index]
+                            itemsIndexed(
+                                items = visibleWidgets,
+                                key = { _, widgetId -> widgetId }
+                            ) { index, widgetId ->
                                 var offsetX by remember { mutableStateOf(0f) }
                                 var offsetY by remember { mutableStateOf(0f) }
                                 var isDragging by remember { mutableStateOf(false) }
 
                                 Box(
                                     modifier = Modifier
+                                        .fillMaxWidth()
+                                        .animateItem()
                                         .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
                                         .graphicsLayer {
-                                            shadowElevation = if (isDragging) density.run { 8.dp.toPx() } else 0f
-                                            scaleX = if (isDragging) 1.05f else 1.0f
-                                            scaleY = if (isDragging) 1.05f else 1.0f
-                                            alpha = if (isDragging) 0.8f else 1.0f
+                                            scaleX = if (isDragging) 1.05f else 1f
+                                            scaleY = if (isDragging) 1.05f else 1f
+                                            shadowElevation = if (isDragging) with(density) { 16.dp.toPx() } else 0f
+                                            alpha = if (isDragging) 0.8f else 1f
                                         }
-                                        .pointerInput(Unit) {
+                                        .pointerInput(state.isReordering) {
+                                            if (!state.isReordering) return@pointerInput
                                             detectDragGesturesAfterLongPress(
-                                                onDragStart = { 
-                                                    isDragging = true
-                                                    viewModel.processIntent(DashboardIntent.StartReordering)
-                                                },
+                                                onDragStart = { isDragging = true },
                                                 onDragEnd = {
                                                     isDragging = false
                                                     offsetX = 0f
@@ -141,14 +137,13 @@ fun DashboardScreen(
                                                     change.consume()
                                                     offsetX += dragAmount.x
                                                     offsetY += dragAmount.y
-                                                    
-                                                    val layoutInfo = gridState.layoutInfo
-                                                    val currentItemInfo = layoutInfo.visibleItemsInfo.find { it.key == widgetId }
-                                                    if (currentItemInfo != null) {
-                                                        val centerX = currentItemInfo.offset.x + currentItemInfo.size.width / 2 + offsetX
-                                                        val centerY = currentItemInfo.offset.y + currentItemInfo.size.height / 2 + offsetY
-                                                        
-                                                        val targetItem = layoutInfo.visibleItemsInfo.find { target ->
+
+                                                    val currentItem = gridState.layoutInfo.visibleItemsInfo.find { it.key == widgetId }
+                                                    if (currentItem != null) {
+                                                        val centerX = currentItem.offset.x + offsetX + (currentItem.size.width / 2)
+                                                        val centerY = currentItem.offset.y + offsetY + (currentItem.size.height / 2)
+
+                                                        val targetItem = gridState.layoutInfo.visibleItemsInfo.find { target ->
                                                             target.key != widgetId &&
                                                             centerX > target.offset.x && centerX < (target.offset.x + target.size.width) &&
                                                             centerY > target.offset.y && centerY < (target.offset.y + target.size.height)
@@ -238,8 +233,6 @@ fun DashboardScreen(
                 }
             )
         }
-
-
     }
 
     androidx.activity.compose.BackHandler(enabled = state.isLyricsFullScreen || state.isStatsExpanded) {

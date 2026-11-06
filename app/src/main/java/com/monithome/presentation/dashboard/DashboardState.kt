@@ -41,7 +41,6 @@ data class DashboardState(
     val proxmoxToken: String = "",
     val proxmoxEnabled: Boolean = false,
     val proxmoxAlerts: List<ProxmoxAlert> = emptyList(),
-    val activeProxmoxBannerAlert: ProxmoxAlert? = null,
     val showProxmoxSettingsDialog: Boolean = false
 )
 
@@ -107,7 +106,6 @@ sealed class DashboardIntent {
 
     // Proxmox Sentinel Direct Integration
     data class SaveProxmoxConfig(val url: String, val token: String, val enabled: Boolean) : DashboardIntent()
-    object DismissProxmoxBanner : DashboardIntent()
     data class DismissProxmoxAlert(val alertId: String) : DashboardIntent()
     data class SetProxmoxSettingsDialog(val show: Boolean) : DashboardIntent()
 }

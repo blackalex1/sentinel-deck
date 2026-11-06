@@ -108,14 +108,6 @@ class DashboardViewModel(
             }
         }
 
-        viewModelScope.launch {
-            proxmoxClient.latestAlert.collect { alert ->
-                if (alert.severity == "CRITICAL" || alert.severity == "WARNING") {
-                    _state.update { it.copy(activeProxmoxBannerAlert = alert) }
-                }
-            }
-        }
-
         // Автоматическая синхронизация Proxmox Sentinel из плагина Sentinel Hub
         viewModelScope.launch {
             _state.map { it.stats["proxmox_sentinel"] }
