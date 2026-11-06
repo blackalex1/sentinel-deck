@@ -8,4 +8,8 @@ interface SettingsRepository {
     fun getString(key: String, default: String? = null): String?
     fun saveString(key: String, value: String?)
     fun getDeviceId(): String
+
+    // Proxmox Sentinel Direct Integration
+    fun getProxmoxConfig(): Triple<String, String, Boolean>
+    fun saveProxmoxConfig(url: String, token: String, enabled: Boolean)
 }

@@ -41,4 +41,19 @@ class SettingsRepositoryImpl(context: Context) : SettingsRepository {
         }
         return id!!
     }
+
+    override fun getProxmoxConfig(): Triple<String, String, Boolean> {
+        val url = prefs.getString("proxmox_server_url", "https://192.168.1.89:8443") ?: "https://192.168.1.89:8443"
+        val token = prefs.getString("proxmox_bearer_token", "") ?: ""
+        val enabled = prefs.getBoolean("proxmox_enabled", false)
+        return Triple(url, token, enabled)
+    }
+
+    override fun saveProxmoxConfig(url: String, token: String, enabled: Boolean) {
+        prefs.edit()
+            .putString("proxmox_server_url", url.trim())
+            .putString("proxmox_bearer_token", token.trim())
+            .putBoolean("proxmox_enabled", enabled)
+            .apply()
+    }
 }

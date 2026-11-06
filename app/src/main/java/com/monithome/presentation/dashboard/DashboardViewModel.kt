@@ -4,11 +4,13 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.monithome.data.network.proxmox.ProxmoxDirectClient
 import com.monithome.data.network.socket.PcSocketClient
 import com.monithome.data.network.socket.PcDiscovery
 import com.monithome.data.network.socket.SocketEvent
 import com.monithome.domain.models.PluginInfo
 import com.monithome.domain.models.CameraRequest
+import com.monithome.domain.models.proxmox.ProxmoxConnectionState
 import com.monithome.domain.repository.PluginRepository
 import com.monithome.domain.repository.SettingsRepository
 import com.monithome.presentation.dashboard.handlers.*
@@ -20,7 +22,8 @@ class DashboardViewModel(
     private val socketClient: PcSocketClient,
     private val pcDiscovery: PcDiscovery,
     private val pluginRepository: PluginRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val proxmoxClient: ProxmoxDirectClient
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(DashboardState())
@@ -32,7 +35,7 @@ class DashboardViewModel(
     private val connectionHandler = ConnectionHandler(socketClient, pcDiscovery)
     private val statsHandler = StatsHandler(pluginRepository)
     private val mediaHandler = MediaHandler(pluginRepository)
-    private val intentHandler = IntentHandler(context, socketClient, pluginRepository, settingsRepository, manualSelectedSourceId) { startDiscovery() }
+    private val intentHandler = IntentHandler(context, socketClient, proxmoxClient, pluginRepository, settingsRepository, manualSelectedSourceId) { startDiscovery() }
 
     init {
         setupObservers()
@@ -41,7 +44,7 @@ class DashboardViewModel(
     }
 
     private fun setupObservers() {
-        // Статус соединения
+        // Статус соединения PC Hub
         viewModelScope.launch {
             connectionHandler.observeConnectionState().collect { connState ->
                 _state.update { connectionHandler.updateWithConnectionState(it, connState) }
@@ -62,7 +65,7 @@ class DashboardViewModel(
             }
         }
 
-        // События сокета
+        // События сокета PC Hub
         viewModelScope.launch {
             socketClient.events.collect { event ->
                 handleSocketEvent(event)
@@ -88,6 +91,36 @@ class DashboardViewModel(
                 }
             }
         }
+
+        // Proxmox Sentinel: Наблюдение за прямым WSS подключением
+        viewModelScope.launch {
+            proxmoxClient.connectionState.collect { connState ->
+                _state.update { it.copy(
+                    proxmoxConnected = (connState is ProxmoxConnectionState.Connected),
+                    proxmoxError = if (connState is ProxmoxConnectionState.Error) connState.message else null
+                ) }
+            }
+        }
+
+        viewModelScope.launch {
+            proxmoxClient.alerts.collect { alerts ->
+                _state.update { it.copy(proxmoxAlerts = alerts) }
+            }
+        }
+
+        viewModelScope.launch {
+            proxmoxClient.logs.collect { logs ->
+                _state.update { it.copy(proxmoxLogs = logs) }
+            }
+        }
+
+        viewModelScope.launch {
+            proxmoxClient.latestAlert.collect { alert ->
+                if (alert.severity == "CRITICAL" || alert.severity == "WARNING") {
+                    _state.update { it.copy(activeProxmoxBannerAlert = alert) }
+                }
+            }
+        }
     }
 
     private fun handleUiConfigUpdate(configs: List<PluginInfo>) {
@@ -102,8 +135,15 @@ class DashboardViewModel(
                 }
                 if (!currentOrder.contains(widgetId)) currentOrder.add(widgetId)
             }
-            s.copy(activePlugins = configs, widgetOrder = currentOrder, 
-                mediaState = s.mediaState.copy(isLyricsActive = isLyricsActive), isLoading = false)
+            if (s.proxmoxEnabled && !currentOrder.contains("proxmox")) {
+                currentOrder.add(0, "proxmox")
+            }
+            s.copy(
+                activePlugins = configs,
+                widgetOrder = currentOrder,
+                mediaState = s.mediaState.copy(isLyricsActive = isLyricsActive),
+                isLoading = false
+            )
         }
     }
 
@@ -145,8 +185,10 @@ class DashboardViewModel(
                 val uuid = event.serverUuid
                 if (!uuid.isNullOrEmpty()) {
                     settingsRepository.saveString("auth_token_$uuid", event.token)
-                    _state.value.serverUrl?.let { url ->
-                        settingsRepository.saveString("server_uuid_$url", uuid)
+                    _state.value.serverUrl.let { url ->
+                        if (url.isNotEmpty()) {
+                            settingsRepository.saveString("server_uuid_$url", uuid)
+                        }
                     }
                     Log.i("DashboardVM", "Saved token for server: $uuid")
                 }
@@ -173,16 +215,25 @@ class DashboardViewModel(
         val savedColor = settingsRepository.getThemeColor()
         val savedSource = settingsRepository.getString("selected_media_source")
         val savedUrl = settingsRepository.getString("server_url")
+        val (pUrl, pToken, pEnabled) = settingsRepository.getProxmoxConfig()
         
         manualSelectedSourceId.value = savedSource
         _state.update { it.copy(
             widgetOrder = savedOrder ?: it.widgetOrder, 
             themeColor = savedColor, 
             serverUrl = savedUrl ?: "",
-            mediaState = it.mediaState.copy(selectedSourceId = savedSource)
+            mediaState = it.mediaState.copy(selectedSourceId = savedSource),
+            proxmoxUrl = pUrl,
+            proxmoxToken = pToken,
+            proxmoxEnabled = pEnabled
         ) }
+
+        // Прямой старт клиента Proxmox Sentinel, если включен
+        if (pEnabled && pUrl.isNotEmpty() && pToken.isNotEmpty()) {
+            proxmoxClient.configure(pUrl, pToken, true)
+        }
         
-        // Автоподключение, если есть сохраненный URL
+        // Автоподключение к PC Hub, если есть сохраненный URL
         if (!savedUrl.isNullOrEmpty()) {
             processIntent(DashboardIntent.Connect(savedUrl))
         }
@@ -195,8 +246,6 @@ class DashboardViewModel(
                     val alreadyExists = s.discoveredServers.any { it.url == server.url }
                     val newList = if (!alreadyExists) s.discoveredServers + server else s.discoveredServers
                     
-                    // Если мы нашли сервер, который совпадает с текущим URL, 
-                    // и у нас есть для него токен (по UUID), попробуем "тихо" переподключиться с токеном
                     if (server.url == s.serverUrl && !server.uuid.isNullOrEmpty()) {
                         val token = settingsRepository.getString("auth_token_${server.uuid}")
                         if (!token.isNullOrEmpty() && !s.isConnected && !s.isLoading) {

@@ -2,6 +2,7 @@ package com.monithome.presentation.dashboard.handlers
 
 import android.content.Context
 import android.util.Log
+import com.monithome.data.network.proxmox.ProxmoxDirectClient
 import com.monithome.data.network.socket.PcSocketClient
 import com.monithome.data.network.socket.CameraStreamService
 import com.monithome.domain.repository.PluginRepository
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.update
 class IntentHandler(
     private val context: Context,
     private val socketClient: PcSocketClient,
+    private val proxmoxClient: ProxmoxDirectClient,
     private val pluginRepository: PluginRepository,
     private val settingsRepository: SettingsRepository,
     private val manualSelectedSourceId: MutableStateFlow<String?>,
@@ -25,14 +27,13 @@ class IntentHandler(
                 if (intent.url != null) {
                     settingsRepository.saveString("server_url", intent.url)
                     
-                    // Ищем UUID этого сервера среди обнаруженных (или берем сохраненный для этого URL)
                     val discovered = state.value.discoveredServers.find { it.url == intent.url }
                     val uuid = discovered?.uuid ?: settingsRepository.getString("server_uuid_${intent.url}")
                     
                     val token = if (!uuid.isNullOrEmpty()) {
                         settingsRepository.getString("auth_token_$uuid")
                     } else {
-                        settingsRepository.getString("auth_token") // Фолбэк на старый метод
+                        settingsRepository.getString("auth_token")
                     }
                     
                     val deviceId = settingsRepository.getDeviceId()
@@ -86,6 +87,7 @@ class IntentHandler(
                 val s = state.value
                 val visibleWidgets = s.widgetOrder.filter { id ->
                     when (id) {
+                        "proxmox" -> s.proxmoxEnabled
                         "media" -> s.activePlugins.any { it.type == "media_source" && it.active }
                         "pc_system" -> s.activePlugins.any { it.id == "pc_system" && it.active }
                         "yandex_lyrics" -> s.mediaState.isLyricsActive
@@ -128,6 +130,28 @@ class IntentHandler(
                     showCameraConfirmDialog = false,
                     pendingCameraRequest = null
                 ) }
+            }
+
+            // Proxmox Sentinel Direct Integration
+            is DashboardIntent.SaveProxmoxConfig -> {
+                settingsRepository.saveProxmoxConfig(intent.url, intent.token, intent.enabled)
+                proxmoxClient.configure(intent.url, intent.token, intent.enabled)
+                state.update { it.copy(
+                    proxmoxUrl = intent.url,
+                    proxmoxToken = intent.token,
+                    proxmoxEnabled = intent.enabled,
+                    showProxmoxSettingsDialog = false
+                ) }
+            }
+            is DashboardIntent.DismissProxmoxBanner -> {
+                state.update { it.copy(activeProxmoxBannerAlert = null) }
+            }
+            is DashboardIntent.SetProxmoxSettingsDialog -> {
+                state.update { it.copy(showProxmoxSettingsDialog = intent.show) }
+            }
+            is DashboardIntent.ClearProxmoxLogs -> {
+                proxmoxClient.clearLogs()
+                state.update { it.copy(proxmoxLogs = emptyList()) }
             }
         }
     }

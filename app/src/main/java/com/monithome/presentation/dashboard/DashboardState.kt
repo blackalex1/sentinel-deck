@@ -3,6 +3,8 @@ package com.monithome.presentation.dashboard
 import com.monithome.data.network.socket.DiscoveredServer
 import com.monithome.domain.models.PluginInfo
 import com.monithome.domain.models.CameraRequest
+import com.monithome.domain.models.proxmox.ProxmoxAlert
+import com.monithome.domain.models.proxmox.ProxmoxLog
 
 data class DashboardState(
     val isLoading: Boolean = false,
@@ -20,7 +22,7 @@ data class DashboardState(
     val lyrics: List<com.monithome.domain.models.LyricLine> = emptyList(),
     val isLyricsFullScreen: Boolean = false,
     val translations: Map<String, String> = emptyMap(),
-    val widgetOrder: List<String> = listOf("media", "pc_system", "virtual_camera", "yandex_lyrics", "system_stats", "pc_disks", "keenetic_mihomo"),
+    val widgetOrder: List<String> = listOf("proxmox", "media", "pc_system", "virtual_camera", "yandex_lyrics", "system_stats", "pc_disks", "keenetic_mihomo"),
     
     // Stats History
     val isStatsExpanded: Boolean = false,
@@ -31,7 +33,18 @@ data class DashboardState(
     
     // Camera confirmation
     val showCameraConfirmDialog: Boolean = false,
-    val pendingCameraRequest: CameraRequest.Start? = null
+    val pendingCameraRequest: CameraRequest.Start? = null,
+
+    // Proxmox Sentinel Direct Integration
+    val proxmoxConnected: Boolean = false,
+    val proxmoxError: String? = null,
+    val proxmoxUrl: String = "https://192.168.1.89:8443",
+    val proxmoxToken: String = "",
+    val proxmoxEnabled: Boolean = false,
+    val proxmoxAlerts: List<ProxmoxAlert> = emptyList(),
+    val proxmoxLogs: List<ProxmoxLog> = emptyList(),
+    val activeProxmoxBannerAlert: ProxmoxAlert? = null,
+    val showProxmoxSettingsDialog: Boolean = false
 )
 
 data class MediaUIState(
@@ -93,4 +106,10 @@ sealed class DashboardIntent {
     
     // Camera confirmation
     data class ConfirmCamera(val accept: Boolean) : DashboardIntent()
+
+    // Proxmox Sentinel Direct Integration
+    data class SaveProxmoxConfig(val url: String, val token: String, val enabled: Boolean) : DashboardIntent()
+    object DismissProxmoxBanner : DashboardIntent()
+    data class SetProxmoxSettingsDialog(val show: Boolean) : DashboardIntent()
+    object ClearProxmoxLogs : DashboardIntent()
 }

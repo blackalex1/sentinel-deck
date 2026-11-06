@@ -1,5 +1,6 @@
 package com.monithome.core.di
 
+import com.monithome.data.network.proxmox.ProxmoxDirectClient
 import com.monithome.data.network.socket.PcSocketClient
 import com.monithome.data.network.socket.PcDiscovery
 import com.monithome.data.network.yandex.YandexStationClient
@@ -29,6 +30,7 @@ val appModule = module {
     single { PcDiscovery(androidContext()) }
     single { YandexStationClient(androidContext(), get()) }
     single { YandexLyricsClient(get()) }
+    single { ProxmoxDirectClient(get()) }
     single<PluginRepository> { PluginRepositoryImpl(androidContext(), get<PcSocketClient>(), get<YandexStationClient>(), get<YandexLyricsClient>(), get<SettingsRepository>()) }
     single<SettingsRepository> { SettingsRepositoryImpl(androidContext()) }
     
@@ -36,5 +38,5 @@ val appModule = module {
     factory { SyncLyricsUseCase() }
     
     // ViewModels
-    viewModel { DashboardViewModel(androidContext(), get<PcSocketClient>(), get<PcDiscovery>(), get<PluginRepository>(), get<SettingsRepository>()) }
+    viewModel { DashboardViewModel(androidContext(), get<PcSocketClient>(), get<PcDiscovery>(), get<PluginRepository>(), get<SettingsRepository>(), get<ProxmoxDirectClient>()) }
 }

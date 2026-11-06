@@ -21,6 +21,19 @@ fun WidgetContent(widgetId: String, state: DashboardState, viewModel: DashboardV
     val onToggleStats = remember(viewModel) { { viewModel.processIntent(DashboardIntent.ToggleStatsExpanded) } }
 
     when (widgetId) {
+        "proxmox" -> {
+            if (state.proxmoxEnabled) {
+                com.monithome.presentation.components.proxmox.ProxmoxWidget(
+                    connected = state.proxmoxConnected,
+                    enabled = state.proxmoxEnabled,
+                    error = state.proxmoxError,
+                    alerts = state.proxmoxAlerts,
+                    logs = state.proxmoxLogs,
+                    themeColor = state.themeColor,
+                    onIntent = onIntent
+                )
+            }
+        }
         "virtual_camera" -> {
             if (state.activePlugins.any { it.id == "virtual_camera" && it.active }) {
                 CameraWidget(

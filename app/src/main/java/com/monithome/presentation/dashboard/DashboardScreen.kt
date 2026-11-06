@@ -17,6 +17,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.monithome.presentation.components.lyrics.LyricsWidget
 import com.monithome.presentation.components.stats.StatsChartsWidget
+import com.monithome.presentation.components.proxmox.ProxmoxAlertBanner
+import com.monithome.presentation.components.proxmox.ProxmoxSettingsDialog
 import com.monithome.presentation.dashboard.components.*
 import org.koin.androidx.compose.koinViewModel
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -54,6 +56,12 @@ fun DashboardScreen(
                 .padding(paddingValues)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
+                // Всплывающий алерт безопасности Proxmox Sentinel (в самом верху экрана)
+                ProxmoxAlertBanner(
+                    alert = state.activeProxmoxBannerAlert,
+                    onDismiss = { viewModel.processIntent(DashboardIntent.DismissProxmoxBanner) }
+                )
+
                 // Панель выбора цвета (появляется при перетаскивании)
                 AnimatedVisibility(
                     visible = state.isReordering,
@@ -75,9 +83,10 @@ fun DashboardScreen(
                     } else {
                         val gridState = rememberLazyStaggeredGridState()
                         // Фильтруем только активные виджеты для отображения
-                        val visibleWidgets = remember(state.widgetOrder, state.activePlugins, state.mediaState.isLyricsActive) {
+                        val visibleWidgets = remember(state.widgetOrder, state.activePlugins, state.mediaState.isLyricsActive, state.proxmoxEnabled) {
                             state.widgetOrder.filter { id ->
                                 when (id) {
+                                    "proxmox" -> state.proxmoxEnabled
                                     "media" -> state.activePlugins.any { it.type == "media_source" && it.active }
                                     "pc_system" -> state.activePlugins.any { it.id == "pc_system" && it.active }
                                     "yandex_lyrics" -> state.mediaState.isLyricsActive
@@ -212,6 +221,21 @@ fun DashboardScreen(
         // Диалог подтверждения включения камеры (поверх всего)
         if (state.showCameraConfirmDialog) {
             CameraConfirmDialog(state, viewModel)
+        }
+
+        // Диалог настроек Proxmox Sentinel (поверх всего)
+        if (state.showProxmoxSettingsDialog) {
+            ProxmoxSettingsDialog(
+                initialUrl = state.proxmoxUrl,
+                initialToken = state.proxmoxToken,
+                initialEnabled = state.proxmoxEnabled,
+                onSave = { url, token, enabled ->
+                    viewModel.processIntent(DashboardIntent.SaveProxmoxConfig(url, token, enabled))
+                },
+                onDismiss = {
+                    viewModel.processIntent(DashboardIntent.SetProxmoxSettingsDialog(false))
+                }
+            )
         }
 
 

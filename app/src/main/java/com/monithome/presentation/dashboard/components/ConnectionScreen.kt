@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -228,6 +229,26 @@ fun ConnectionScreen(state: DashboardState, viewModel: DashboardViewModel) {
                 ) {
                     Text("OK", fontWeight = FontWeight.Bold)
                 }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedButton(
+                onClick = { viewModel.processIntent(DashboardIntent.SetProxmoxSettingsDialog(true)) },
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = if (state.proxmoxConnected) Color(0xFF22C55E) else Color.White
+                )
+            ) {
+                Icon(imageVector = Icons.Default.Security, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                val statusLabel = when {
+                    !state.proxmoxEnabled -> "Proxmox Sentinel (Выкл)"
+                    state.proxmoxConnected -> "Proxmox Sentinel (WSS Онлайн)"
+                    else -> "Proxmox Sentinel (Настройка)"
+                }
+                Text(text = statusLabel, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }
