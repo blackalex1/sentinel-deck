@@ -60,7 +60,7 @@ class PcSocketClient(private val okHttpClient: OkHttpClient) {
             url.startsWith("https://") -> url
             url.startsWith("wss://") -> url.replace("wss://", "https://")
             url.startsWith("http://") -> url.replace("http://", "https://")
-            url.startsWith("ws://") -> url.replace("ws://", "https://")
+            url.startsWith("ws://") -> url.replace("ws://", "https://") // nosemgrep: javascript.lang.security.detect-insecure-websocket.detect-insecure-websocket
             else -> "https://$url"
         }
         Log.i("PcSocketClient", "Connecting to secure socket: $finalUrl (token present: ${token != null})")

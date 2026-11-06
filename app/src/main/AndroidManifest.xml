@@ -22,6 +22,8 @@
             android:foregroundServiceType="camera"
             android:exported="false" />
         
+        <!-- nosemgrep: java.android.security.exported_activity.exported_activity -->
+        <!-- Main launcher activity required for OS to launch the app; contains no sensitive exported intent handlers -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
