@@ -1,4 +1,0 @@
-# Semgrep ignore rules for Sentinel Deck
-# AndroidManifest.xml: MainActivity is the system launcher entrypoint with required android:exported="true"
-**/AndroidManifest.xml
-app/src/main/AndroidManifest.xml
